@@ -1,0 +1,6 @@
+S:\VisualStudio\Test\Evo\Evo\bin\Debug\Evo.exe.config
+S:\VisualStudio\Test\Evo\Evo\bin\Debug\Evo.exe
+S:\VisualStudio\Test\Evo\Evo\bin\Debug\Evo.pdb
+S:\VisualStudio\Test\Evo\Evo\obj\Debug\Evo.csprojAssemblyReference.cache
+S:\VisualStudio\Test\Evo\Evo\obj\Debug\Evo.exe
+S:\VisualStudio\Test\Evo\Evo\obj\Debug\Evo.pdb
