@@ -12,6 +12,11 @@ namespace Evo
 
         private int _generation = 0;
 
+        private int foodCount;
+        private int poisonCount;
+
+        private float spawnCof = 0.2f;
+
         private List<Bot> _bots = new List<Bot>();
         private int _botsCount = 64;
 
@@ -23,8 +28,8 @@ namespace Evo
         {
             X = 10;
             Y = 5;
-            W = 40;
-            H = 20;
+            W = 50;
+            H = 30;
 
             Random random = new Random();
 
@@ -72,10 +77,32 @@ namespace Evo
                     YPos = i
                 });
             }
+
+            for(int i = 1; i <= 9; i++)
+            {
+                _walls.Add(new Wall()
+                {
+                    X = this.X,
+                    Y = this.Y,
+                    XPos = 10,
+                    YPos = i
+                });
+            }
+
+            for (int i = 1; i <= 9; i++)
+            {
+                _walls.Add(new Wall()
+                {
+                    X = this.X,
+                    Y = this.Y,
+                    XPos = W - 20,
+                    YPos = H - i
+                });
+            }
             #endregion
 
             #region BotInit
-            for(int i = 0; i < _botsCount; i++)
+            for (int i = 0; i < _botsCount; i++)
             {
                 int x = random.Next(1, W + 1);
                 int y = random.Next(1, H + 1);
@@ -95,19 +122,11 @@ namespace Evo
             }
             #endregion
 
-            #region FoodInit
-            for(int i = 0; i < (W*H - 64) * 0.2; i++)
-            {
-                GenerateFood();
-            }
-            #endregion
+            FoodInit();
+            PoisonInit();
 
-            #region PoisonInit
-            for (int i = 0; i < (W * H - 64) * 0.2; i++)
-            {
-                GeneratePoison();
-            }
-            #endregion
+            foodCount = _foods.Count;
+            poisonCount = _poisons.Count;
         }
 
         public void Start()
@@ -119,16 +138,20 @@ namespace Evo
             bool isStopGeneration = false;
 
             Random random = new Random();
+            Print();
 
             while (true)
             {
+                int moveCount = 0;
                 for (int i = 0; true; i++)
                 {
                     int commandExecuteCount = 0;
+                    int unconditionalTransitionCount = 0;
                     while (true)
                     {
-                        Print();
                         i %= _bots.Count;
+
+                        PrintEmpty(_bots[i].XPos, _bots[i].YPos);
 
                         int command = _bots[i].GetCurrentCommand();
                         _bots[i].Move();
@@ -138,10 +161,11 @@ namespace Evo
                         wall = CheckWall(_bots[i].XPos, _bots[i].YPos);
                         bot = CheckBot(_bots[i].XPos, _bots[i].YPos, i);
 
-                        if (command >= 32 && command <= 63)
+                        if (command >= 0 && command <= 7)
                         {
                             if (food != null)
                             {
+                                PrintEmpty(food.XPos, food.YPos);
                                 _foods.Remove(food);
                                 _bots[i].Eat();
 
@@ -152,6 +176,10 @@ namespace Evo
                             }
                             else if (poison != null)
                             {
+                                _bots[i].Back();
+                                PrintEmpty(_bots[i].XPos, _bots[i].YPos);
+
+                                PrintEmpty(poison.XPos, poison.YPos);
                                 _poisons.Remove(poison);
                                 _bots.Remove(_bots[i]);
                             }
@@ -176,24 +204,31 @@ namespace Evo
                                 CheckBotHealthPoint(_bots[i]);
                             }
 
+                            moveCount++;
                             break;
                         }
                         else if (command >= 8 && command <= 15)
                         {
                             if (food != null)
                             {
+                                PrintEmpty(food.XPos, food.YPos);
+                                _foods.Remove(food);
+
                                 _bots[i].Eat();
                                 _bots[i].MoveCurrentCommand((int)TouchObjects.Food);
                             }
                             else if (poison != null)
                             {
-                                _foods.Add(new Food()
+                                var changeFood = new Food()
                                 {
                                     X = this.X,
                                     Y = this.Y,
                                     XPos = poison.XPos,
                                     YPos = poison.YPos
-                                });
+                                };
+
+                                _foods.Add(changeFood);
+                                changeFood.Print();
                                 _poisons.Remove(poison);
                                 _bots[i].MoveCurrentCommand((int)TouchObjects.Poison);
                             }
@@ -247,12 +282,21 @@ namespace Evo
                         {
                             _bots[i].Back();
                             _bots[i].Rotate();
-                            _bots[i].MoveCurrentCommand(1);
+                            _bots[i].MoveCurrentCommand(random.Next(1, 7));
+                            //_bots[i].Damage();
+                            //CheckBotHealthPoint(_bots[i]);
                         }
-                        else if (command >= 0 && command <= 7)
+                        else if (command >= 32 && command <= 63)
                         {
                             _bots[i].Back();
                             _bots[i].UnconditionalTransition();
+
+                            unconditionalTransitionCount++;
+
+                            if(unconditionalTransitionCount == 10)
+                            {
+                                _bots[i].Mutate();
+                            }
                         }
 
                         commandExecuteCount++;
@@ -267,22 +311,21 @@ namespace Evo
                             isStopGeneration = true;
                             break;
                         }
-                        Console.Clear();
                     }
 
-                    if(_foods.Count <= 20)
+                    if(_foods.Count <= foodCount*0.9)
                     {
-                        for(int j = 0; j < 10; j++)
+                        for(int j = 0; j < random.Next(1, (int)(foodCount*0.1)); j++)
                         {
-                            GenerateFood();
+                            GenerateFood().Print();
                         }
                     }
 
-                    if(_poisons.Count <= 20)
+                    if(_poisons.Count <= poisonCount*0.8)
                     {
-                        for (int j = 0; j < 10; j++)
+                        for (int j = 0; j < random.Next(1, (int)(poisonCount * 0.1)); j++)
                         {
-                            GeneratePoison();
+                            GeneratePoison().Print();
                         }
                     }
 
@@ -295,7 +338,7 @@ namespace Evo
                 int botsCount = _bots.Count;
                 for (int i = 0; i < botsCount; i++)
                 {
-                    for(int j = 0; j < _botsCount / botsCount - 1; j++)
+                    for(int j = 0; j < _botsCount / botsCount; j++)
                     {
                         int x = random.Next(1, W + 1);
                         int y = random.Next(1, H + 1);
@@ -311,13 +354,27 @@ namespace Evo
                         newBot.XPos = x;
                         newBot.YPos = y;
 
-                        if(j == 6)
+                        if(j == 7)
                         {
                             newBot.Mutate();
                         }
 
                         _bots.Add(newBot);
+                        newBot.Print();
                     }
+                    PrintEmpty(_bots[i].XPos, _bots[i].YPos);
+                }
+
+                _bots.RemoveRange(0, 8);
+
+                 foreach(var foodClear in _foods)
+                {
+                    PrintEmpty(foodClear.XPos, foodClear.YPos);
+                }
+
+                foreach (var poisonClear in _poisons)
+                {
+                    PrintEmpty(poisonClear.XPos, poisonClear.YPos);
                 }
 
                 _foods.Clear();
@@ -326,8 +383,18 @@ namespace Evo
                 FoodInit();
                 PoisonInit();
 
+                PrintFood();
+                PrintPoison();
+
                 _generation++;
                 isStopGeneration = false;
+
+                Console.SetCursorPosition(X + W + 5, Y);
+                Console.ForegroundColor = ConsoleColor.White;
+                Console.WriteLine($"Generation: {_generation}");
+
+                //Console.SetCursorPosition(X + W + 5, Y + 5);
+                //Console.WriteLine($"Interrations Count: {moveCount}");
             }
         }
 
@@ -357,7 +424,13 @@ namespace Evo
             Console.WriteLine($"Generation: {_generation}");
         }
 
-        private void GenerateFood()
+        public void PrintEmpty(int x, int y)
+        {
+            Console.SetCursorPosition(X + x, Y + y);
+            Console.Write(" ");
+        }
+
+        private Food GenerateFood()
         {
             Random random = new Random();
             int x = random.Next(1, W + 1);
@@ -368,16 +441,20 @@ namespace Evo
                 y = random.Next(1, H + 1);
             }
 
-            _foods.Add(new Food()
+            var food = new Food()
             {
                 X = this.X,
                 Y = this.Y,
                 XPos = x,
                 YPos = y
-            });
+            };
+
+            _foods.Add(food);
+
+            return food;
         }
 
-        private void GeneratePoison()
+        private Poison GeneratePoison()
         {
             Random random = new Random();
             int x = random.Next(1, W + 1);
@@ -388,13 +465,17 @@ namespace Evo
                 y = random.Next(1, H + 1);
             }
 
-            _poisons.Add(new Poison()
+            var poison = new Poison()
             {
                 X = this.X,
                 Y = this.Y,
                 XPos = x,
                 YPos = y
-            });
+            };
+
+            _poisons.Add(poison);
+
+            return poison;
         }
 
         private bool IsSpaceFree(int x, int y)
@@ -418,6 +499,14 @@ namespace Evo
             foreach(var poison in _poisons)
             {
                 if(poison.XPos == x && poison.YPos == y)
+                {
+                    return false;
+                }
+            }
+
+            foreach(var wall in _walls)
+            {
+                if(wall.XPos == x && wall.YPos == y)
                 {
                     return false;
                 }
@@ -483,16 +572,21 @@ namespace Evo
 
         private void CheckBotHealthPoint(Bot bot)
         {
-            if(!bot.IsAlive())
+            if (!bot.IsAlive())
             {
+                PrintEmpty(bot.XPos, bot.YPos);
                 _bots.Remove(bot);
+                return;
             }
+            
+            PrintEmpty(bot.XPos, bot.YPos);
+            bot.Print();
         }
 
         private void FoodInit()
         {
             #region FoodInit
-            for (int i = 0; i < (W * H - 64) * 0.2; i++)
+            for (int i = 0; i < (W * H - 64) * spawnCof; i++)
             {
                 GenerateFood();
             }
@@ -502,11 +596,27 @@ namespace Evo
         private void PoisonInit()
         {
             #region PoisonInit
-            for (int i = 0; i < (W * H - 64) * 0.2; i++)
+            for (int i = 0; i < (W * H - 64) * spawnCof; i++)
             {
                 GeneratePoison();
             }
             #endregion
+        }
+
+        private void PrintFood()
+        {
+            foreach(var food in _foods)
+            {
+                food.Print();
+            }
+        }
+
+        private void PrintPoison()
+        {
+            foreach(var poison in _poisons)
+            {
+                poison.Print();
+            }
         }
     }
 }

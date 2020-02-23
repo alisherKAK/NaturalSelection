@@ -7,6 +7,7 @@ namespace Evo
         public override void Print()
         {
             Console.SetCursorPosition(X + XPos, Y + YPos);
+            Console.ForegroundColor = ConsoleColor.Gray;
             Console.Write("#");
         }
     }

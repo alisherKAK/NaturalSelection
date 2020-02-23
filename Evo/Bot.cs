@@ -25,7 +25,7 @@ namespace Evo
             Random random = new Random();
             for(int i = 0; i < _commandsCount; i++)
             {
-                _commands[i] = random.Next(0, _commandsCount - 1);
+                _commands[i] = random.Next(0, _commandsCount - 1);    
             }
         }
 
@@ -120,7 +120,8 @@ namespace Evo
 
         public void UnconditionalTransition()
         {
-            _currentCommmand = (_currentCommmand + _commands[_currentCommmand]) % _commandsCount;
+            _currentCommmand += _commands[_currentCommmand];
+            _currentCommmand %= _commandsCount;
         }
 
         public Bot GetClone()
@@ -170,6 +171,7 @@ namespace Evo
         public override void Print()
         {
             Console.SetCursorPosition(X + XPos, Y + YPos);
+            Console.ForegroundColor = ConsoleColor.Cyan;
             Console.Write("B");
         }
     }
